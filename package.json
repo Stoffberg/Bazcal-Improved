@@ -1,20 +1,33 @@
 {
-  "name": "bazcal-remake",
+  "name": "bazcal-im",
   "version": "1.0.0",
   "description": "Bazcal bot remaked",
   "main": "bazcal.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Daniel Wykerd and Dirk Beukes",
+  "license": "AGPL-3.0",
   "dependencies": {
     "discord.js": "^12.2.0",
-    "discord.js-commando": "git+https://github.com/discordjs/Commando.git",
-    "fs": "0.0.1-security",
+    "discord.js-commando": "^0.10.0",
     "mongoose": "^5.9.27",
     "ms": "^2.1.2",
-    "node-schedule": "^1.3.2",
-    "path": "^0.12.7"
-  }
+    "node-schedule": "^1.3.2"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jakkalsie/Bazcal-Improved.git"
+  },
+  "keywords": [
+    "bazcal",
+    "trading",
+    "skyblock",
+    "hypixel"
+  ],
+  "bugs": {
+    "url": "https://github.com/Jakkalsie/Bazcal-Improved/issues"
+  },
+  "homepage": "https://github.com/Jakkalsie/Bazcal-Improved#readme"
 }

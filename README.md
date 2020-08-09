@@ -24,7 +24,7 @@ Bazcal is slowly expanding into a general Hypixel Profit bot. We might look at i
 First, Clone this repo if you haven't already
 
 ```
-git clone https://github.com/Jakkalsie/Bazcal-Remake.git
+git clone https://github.com/Jakkalsie/Bazcal-Improved.git
 ```
 Next setup the required variables in the `config.json` file
 
