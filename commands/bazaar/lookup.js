@@ -19,6 +19,8 @@ const {
     Command
 } = require('discord.js-commando');
 const items = require('../../utils/items.json');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = class lookupCommand extends Command {
     constructor(client) {
@@ -38,7 +40,7 @@ module.exports = class lookupCommand extends Command {
     }
 
     async run(message, { item_name }) {
-        const item_cache = require('../../data/cache.json');
+        const item_cache = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../data/cache.json')));
         let item = item_cache[item_name];
 
         if (!item) {

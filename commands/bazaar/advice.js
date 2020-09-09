@@ -72,13 +72,7 @@ module.exports = class custom_adviceCommand extends Command {
         stability,
         safe
     }) {
-        const member = await message.client.provider.get_member(message);
-        const channel = await message.client.provider.get_channel(message, member);
-
-        member.last_message = new Date();
-        member.channel_id = channel.id;
-
-        await member.save();
+        const { member, channel } = await message.client.provider.get_channel(message);
 
         const parsed_balance = /\d[A-z]/.test(balance) ? message.client.provider.convert_number(balance) : parseFloat(balance);
 

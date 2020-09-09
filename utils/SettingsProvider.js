@@ -18,6 +18,9 @@
 const Commando = require('discord.js-commando');
 const mongoose = require('mongoose');
 
+const fs = require('fs');
+const path = require('path');
+
 const {
     memberSchema
 } = require('../models/memberSchema');
@@ -26,6 +29,10 @@ const {
 } = require('../models/configSchema');
 
 const items = require('./items.json');
+
+const auction_calculator = require('bazcal-lib/lib/auction/index').default;
+const { open } = require('sqlite');
+const sqlite3 = require('sqlite3');
 
 class BazcalSettingsProvider extends Commando.SettingProvider {
     constructor() {
@@ -45,83 +52,30 @@ class BazcalSettingsProvider extends Commando.SettingProvider {
             console.log(err);
             process.exit(-1);
         }
-    }
 
-    async get_category(message) {
-        const guild = message.guild;
-
-        let config = await configSchema.findOne({
-            server_id: message.guild.id
+        const db = await open({
+            filename: path.resolve(__dirname, './auctions.db'),
+            driver: sqlite3.Database
         });
 
-        let category = await guild.channels.cache.get(config ? config.category_id : 0);
+        const auction = new auction_calculator(db);
 
-        if (category) return message.say(`Category was found in your server with ID: ${category.id}`);
+        auction.init();
 
-        if (config) config.remove();
-
-        try {
-            category = await guild.channels.create('——————Bazcal——————', {
-                type: 'category',
-                topic: 'Contains all the Bazcal channels',
-            });
-        } catch (error) {
-            return message.say('\`Permission error\` Could not create category');
-        }
-
-        config = new configSchema({
-            server_id: message.guild.id,
-            category_id: category.id
-        })
-
-        await config.save()
-
-        return category;
+        this.auction = auction;
     }
 
-    async get_member(message) {
-        let member = await memberSchema.findOne({
-            user_id: message.author.id,
-            server_id: message.guild.id
-        })
-
-        const channel = await this.get_channel(message, member);
-
-        if (!member) {
-            member = new memberSchema({
-                user_id: message.author.id,
-                server_id: message.guild.id,
-                channel_id: channel.id,
-                last_message: new Date(),
-                orders: []
-            })
-        }
-
-        return member;
-    }
-
-    async get_channel(message, member) {
-        if (member && member.channel_id) {
-            try {
-                const channel = await message.guild.channels.cache.get(member.channel_id)
-                if (channel) return channel;
-            } catch (error) {
-                member.channel_id = '';
-            }
-        }
-
-        const server = message.guild;
-        const name = message.author.tag.replace(/#/g, '_');
-        const parent = await configSchema.findOne({
-            server_id: message.guild.id
+    async create_category(message, header, topic) {
+        return await message.guild.channels.create(header, {
+            type: 'category',
+            topic: topic,
         });
+    }
 
-        let category = await message.guild.channels.cache.get(parent.category_id);
-        if (!category) category = await this.get_category(message);
-
-        const channel = await server.channels.create(`bz_${name}`, {
+    async create_channel(message, header, topic, parent) {
+        return await message.guild.channels.create(header, {
             type: 'text',
-            topic: 'This channel will be deleted after 3 minutes if you have no pending orders',
+            topic: topic,
             permissionOverwrites: [{
                     id: message.guild.id,
                     deny: ['VIEW_CHANNEL'],
@@ -131,14 +85,63 @@ class BazcalSettingsProvider extends Commando.SettingProvider {
                     allow: ['VIEW_CHANNEL'],
                 }
             ],
-            parent: category.id
+            parent: parent
+        });
+    }
+
+    async get_channel(message) {
+        let member;
+        let channel;
+
+        member = await memberSchema.findOne({
+            user_id: message.author.id,
+            server_id: message.guild.id
         });
 
-        return channel;
+        if (!member) member = new memberSchema({
+            user_id: message.author.id,
+            server_id: message.guild.id,
+            channel_id: '',
+            last_message: new Date(),
+            level: 1
+        });
+
+        if (member.channel_id) channel = message.guild.channels.cache.get(member.channel_id);
+        if (channel) return {
+            user: member,
+            channel: channel
+        };
+
+        let category;
+        let config = await configSchema.findOne({
+            server_id: message.guild.id
+        });
+
+        if (!config) config = new configSchema({
+            server_id: message.guild.id,
+            category_id: ''
+        });
+
+        if (config.category_id) category = message.guild.channels.cache.get(config.category_id);
+        if (!category) category = await this.create_category(message, '—————Dungeon—————', 'Contains all active games');
+
+        channel = await this.create_channel(message, message.author.tag, 'Your personal channel', category);
+
+        config.category_id = category.id;
+        config.save();
+
+        member.last_message = new Date();
+        member.channel_id = channel.id;
+        member.save();
+
+        return {
+            user: member,
+            channel: channel
+        };
     }
 
     reload_cache() {
-        this.item_cache = require('../data/cache.json');
+        this.item_cache = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../data/cache.json')));
     }
 
     format_advice(array) {
@@ -213,7 +216,7 @@ class BazcalSettingsProvider extends Commando.SettingProvider {
                 average = average / intervals;
                 saverage = saverage / intervals;
 
-                tvolume = Math.min(product.volume / 2016 - average, product.svolume  / 2016 - saverage);
+                tvolume = Math.min(product.volume / 2016 - average, product.svolume / 2016 - saverage);
             } else {
                 tvolume = Math.min(product.volume, product.svolume) / 2016;
             }

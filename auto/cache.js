@@ -107,14 +107,17 @@ async function bazaar_cache (client) {
             }
         }
 
+        //console.log(sell_point)
+
         for (const item_id of sell_point) {
             const members = await memberSchema.find({ orders: item_id });
+
 
             for (const member of members) {
                 try {
                     const channel = client.guilds.cache.get(member.server_id).channels.cache.get(member.channel_id);
 
-                    if (channel) channel.send(`<@${member.user_id}> You need to sell all your **${item_name(item_id)}** right now!`);
+                    if (channel) channel.send(`<@${member.user_id}> You need to sell all your **${item_id}** right now!`);
 
                     member.orders = member.orders.filter(ord => ord !== item_id);
                     if (!member.orders.length) channel.setTopic('No orders in queue. This channel will be deleted in 3 minutes after the last message has been sent.');
@@ -123,6 +126,7 @@ async function bazaar_cache (client) {
 
                     await member.save();  
                 } catch (error) {
+                    console.log(error);
                     await member.remove()
                 }
             }
